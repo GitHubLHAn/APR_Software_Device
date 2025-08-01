@@ -30,6 +30,12 @@ try:
 except ValueError:
     print("-> Default: Destination port will be 1111")
     DEST_PORT = 1111
+    
+try:
+    cnt_do = int(input("\n>> Quantity of mess: "))
+except ValueError:
+    print("-> Default: Quantity of mess will be 1000")
+    cnt_do = 1000
 
 
 
@@ -44,8 +50,9 @@ cnt_received_exact = 0
 
 
 try:
-    while True:
-        length = 12 #random.randint(10, 50)
+    while cnt_do:
+        length = 12 
+        # length = random.randint(4, 50)
         mess_tx = bytearray(length)
 
         mess_tx[0] = 0x01
@@ -56,15 +63,17 @@ try:
             
         mess_tx[length - 1] = crc8(mess_tx, length)
 
+        s_ = time.time()
         sock.sendto(mess_tx, (DEST_IP, DEST_PORT))
         print(f"Sent {len(mess_tx)} bytes: {' '.join(f'{b:02X}' for b in mess_tx)}")
+        sock.settimeout(0.1)  # 2 seconds timeout
         cnt_sent += 1
         
         try:
             mess_rx, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
             print(f"Received {len(mess_rx)} bytes: {' '.join(f'{b:02X}' for b in mess_rx)}")
             if mess_rx == mess_tx:
-                print("-> RX OK")
+                print(f"-> RX OK - {time.time()-s_:.3f} s")
                 cnt_received_exact += 1
             else:
                 print("-> RX NOT OK")
@@ -77,12 +86,15 @@ try:
         # if ina.lower() == 'e':
         #     print("Exiting...")
         #     break
+        cnt_do -= 1
 except KeyboardInterrupt:
     print("Stopped by user")
-    # ============================================================
-    print(f"Total packets sent: {cnt_sent}")
-    print(f"Total packets received exactly: {cnt_received_exact}")
-    print(f"Ratio: {cnt_received_exact / cnt_sent * 100:.2f}%")
-    # ============================================================
 finally:
+    print("Closing socket...")
     sock.close()
+    
+# ============================================================
+print(f"Total packets sent: {cnt_sent}")
+print(f"Total packets received exactly: {cnt_received_exact}")
+print(f"Ratio: {cnt_received_exact / cnt_sent * 100:.2f}%")
+# ============================================================
