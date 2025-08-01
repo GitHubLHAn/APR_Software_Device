@@ -576,6 +576,20 @@ def analysisHex_APR(type="halfword"):
 
     # path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.6_useForTesBootFOTA\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
     
+    while True:
+        inp_fw = str(input("\n> Input Firmware Path: "))
+        
+        if inp_fw == "":    
+            print("-> Default Firmware Path: E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex")
+            path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
+        else:
+            path_firmware = inp_fw
+        
+        if not os.path.exists(path_firmware):
+            print(f"-> [Error] - File '{path_firmware}' does not exist.")
+        else:
+            break
+        
     path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
     
     # path_firmware = ""E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex""

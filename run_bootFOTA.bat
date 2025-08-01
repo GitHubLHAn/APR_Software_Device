@@ -13,5 +13,5 @@ python bootFOTA_APR.py
 :: Giữ cửa sổ console để xem kết quả
 pause
 
-:loop
-goto loop
+:: :loop
+:: goto loop

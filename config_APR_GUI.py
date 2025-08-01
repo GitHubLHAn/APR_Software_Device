@@ -147,8 +147,8 @@ class ConnectApp(tk.Tk):
                                                     data_read[1] == 0xCD and    \
                                                     data_read[2] == 0xB2:
                 ver = str(round(data_read[3]/10,1))
-                messagebox.showinfo("Result ", f"Current Application Version: {ver}")
                 print("-> Rec:", " ".join(f"{b:02X}" for b in data_read))
+                messagebox.showinfo("Result ", f"Current Application Version: {ver}")
             else:
                 print("-> Rec:", " ".join(f"{b:02X}" for b in data_read))
                 messagebox.showerror("Error", "Response Unexpected or CRC mismatch.")
@@ -186,8 +186,8 @@ class ConnectApp(tk.Tk):
                 ip__ = str(data_read[3]) + "." + str(data_read[4]) + "." + str(data_read[5]) + "." + str(data_read[6])
                 port__ = str((data_read[7] << 8) | data_read[8])
                 fre__ = str((data_read[9] << 8) | data_read[10])
-                messagebox.showinfo("Result ", f"   IP: {ip__}\n   Port: {port__}\n   Frequency: {fre__} MHz")
                 print("-> Rec:", " ".join(f"{b:02X}" for b in data_read))
+                messagebox.showinfo("Result ", f"   IP: {ip__}\n   Port: {port__}\n   Frequency: {fre__} MHz") 
             else:
                 print("-> Rec:", " ".join(f"{b:02X}" for b in data_read))
                 messagebox.showerror("Error", "Response Unexpected or CRC mismatch.")
@@ -256,12 +256,14 @@ class ConnectApp(tk.Tk):
 
         try:
             self.udp_socket.sendto(data_send, (ip, port))
+            print("-> Sent:", " ".join(f"{b:02X}" for b in data_send))
             self.udp_socket.settimeout(1)
             data_read, _ = self.udp_socket.recvfrom(256)
             if crc8(data_read, len(data_read)) == data_read[-1] and \
                                                 data_read[0] == 0xAB and  \
                                             data_read[1] == 0xCD and \
                                             data_read[2] == 0xA1:
+                print("-> Rec:", " ".join(f"{b:02X}" for b in data_read))
                 if data_read[3] == 0x59:
                     messagebox.showinfo("Set Parameters", "Configurations Successfully Set!")
                 else:
