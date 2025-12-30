@@ -1,0 +1,1 @@
+Phiên bản sw của AP này dùng cho AP phiên bản v4 (dùng silab).

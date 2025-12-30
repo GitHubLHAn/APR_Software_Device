@@ -32,7 +32,7 @@ except ValueError:
     DEST_PORT = 1111
     
 try:
-    cnt_do = int(input("\n>> Quantity of mess: "))
+    cnt_do = int(input("\n>> Quantity of messages: "))
 except ValueError:
     print("-> Default: Quantity of mess will be 1000")
     cnt_do = 1000

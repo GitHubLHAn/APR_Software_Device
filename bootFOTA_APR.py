@@ -579,11 +579,11 @@ def analysisHex_APR(type="halfword"):
     while True:
         inp_fw = str(input("\n> Input Firmware Path: "))
         
-        if inp_fw == "":    
-            print("-> Default Firmware Path: E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex")
-            path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
-        else:
-            path_firmware = inp_fw
+        # if inp_fw == "":    
+        #     print("-> Default Firmware Path: E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex")
+        #     path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
+        # else:
+        path_firmware = inp_fw
         
         if not os.path.exists(path_firmware):
             print(f"-> [Error] - File '{path_firmware}' does not exist.")
@@ -595,11 +595,11 @@ def analysisHex_APR(type="halfword"):
     # path_firmware = ""E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex""
     num_Line, list_data_flash, size_Hex, addr_start, addr_end = analysis_hex(path_firmware, type)
 
-    print(f"-> [INFOR FIRMWARE] - [{type}]")
-    print(f"->                  - Number Line: {num_Line}")
-    print(f"->                  - Address start Flashing: {hex(addr_start)}")
-    print(f"->                  - Address end Flashing: {hex(addr_end)}")
-    print(f"->                  - Size program: {size_Hex}", " bytes = ", str(round(size_Hex/1024,2)) + "kB")
+    print(f"-> [INFOR NEW FIRMWARE] - [{type}]")
+    print(f"->                      - Number Line: {num_Line}")
+    print(f"->                      - Address start Flashing: {hex(addr_start)}")
+    print(f"->                      - Address end Flashing: {hex(addr_end)}")
+    print(f"->                      - Size program: {size_Hex}", " bytes = ", str(round(size_Hex/1024,2)) + "kB")
     
     return list_data_flash, addr_start, addr_end
 
