@@ -5,7 +5,7 @@ import time
 import subprocess
 
 from datetime import datetime
-from analysis_hex import analysis_hex
+from analysis_advanced_hex import advanced_analysis_hex
 
 
 class UdpConnection:
@@ -374,7 +374,7 @@ def request_status_APR(UDP_SOCKET, retry=100):
     return False
 
 # ======================================================================================================
-def start_bootFota_process(Identify, UDP_SOCKET={}, addr_start=0, addr_end=0, retry=100):
+def start_bootFota_process(Identify, UDP_SOCKET={}, addr_start=0, addr_end=0, retry=10):
     # Send start boot command to Master ------------------------------------------------------------
     print(f"\n>>>>>>>>>>>>>> START BOOT FOTA PROCESS ON APR "
           f"HOST '{UDP_SOCKET.host}', PORT '{UDP_SOCKET.port}'\n") 
@@ -405,53 +405,64 @@ def flashing_master_process(Identify, UDP_SOCKET={}, _list_hex_data=[], retry=10
     print(f"\n>>>>>>>>>>>>>> FLASHING  PROCESS ON APR {Identify}, "
           f"HOST '{UDP_SOCKET.host}', PORT '{UDP_SOCKET.port}'\n") 
     time.sleep(1)
-    cnt_line_data = 0   
+    cnt_element = 0   
     cnt_error = 0
     start_flash_t = time.time()
     data_already_updated = 0
-    while cnt_line_data < len(_list_hex_data):    
-        lenData = len(_list_hex_data[cnt_line_data]['data'])    # length of data to flash
+    
+    while cnt_element < len(_list_hex_data):
+        elem = _list_hex_data[cnt_element]
+        
+        base_address = int(elem['addr'], 16)
+        lenData = int(elem['size'])   
+        data_str = elem['data']
+        data_bytes = bytearray(
+            int(data_str[i:i+2], 16)
+            for i in range(0, len(data_str), 2)
+        )
+        
+        # buld the message to flash
         mess_flash_data = bytearray(lenData+8)  # 8 bytes for header and CRC
         
         mess_flash_data[0] = Identify    # Identify APR, 4 bits
         mess_flash_data[1] = lenData+8  # Total length of message
         mess_flash_data[2] = CMD_FLASHING   # Command for flashing
         
-        mess_flash_data[3] = (_list_hex_data[cnt_line_data]['address'] >> 24) & 0xFF    # address to flash  
-        mess_flash_data[4] = (_list_hex_data[cnt_line_data]['address'] >> 16) & 0xFF    # address to flash
-        mess_flash_data[5] = (_list_hex_data[cnt_line_data]['address'] >> 8) & 0xFF   # address to flash
-        mess_flash_data[6] = (_list_hex_data[cnt_line_data]['address'] >> 0) & 0xFF   # address to flash
-        
-        for j in range(0, len(_list_hex_data[cnt_line_data]['data'])):          # data to flash
-            mess_flash_data[j+7] = _list_hex_data[cnt_line_data]['data'][j]
+        mess_flash_data[3] = (base_address >> 24) & 0xFF    # address to flash  
+        mess_flash_data[4] = (base_address >> 16) & 0xFF    # address to flash
+        mess_flash_data[5] = (base_address >> 8) & 0xFF   # address to flash
+        mess_flash_data[6] = (base_address >> 0) & 0xFF   # address to flash
+    
+        for j in range(0, len(data_bytes)):          # data to flash
+            mess_flash_data[j+7] =data_bytes[j]
             
         start_send = time.time()
         mess_flash_data[mess_flash_data[1]-1] = crc8(mess_flash_data, mess_flash_data[1])
-    
+        
         sendto_APR(mess_flash_data, UDP_SOCKET)    
         # print("-> [Sent] - ", " ".join(f"{b:02X}" for b in mess_flash_data))
-    
-        time.sleep(0.001)
+        
+        # time.sleep(0.001)
         
         try:
             data_read, _ = UDP_SOCKET.socket.recvfrom(256)
             
             if len(data_read) < 2:
                 print("-> [Error]: Response not too short bytes")
-            
+                
             id_m = data_read[0]
             
             if id_m != Identify:
                 print(f"-> [Error] - Unexpected Identify: {id_m} != {Identify}")
                 cnt_error+=1
                 continue
-                
+            
             cmd = data_read[2]
             if cmd != CMD_FLASHING:
                 print(f"-> [Error] - Unexpected Command: {cmd} != {CMD_FLASHING}")
                 cnt_error+=1
                 continue
-
+            
             if crc8(data_read, len(data_read)) == data_read[-1]:
                 # print("-> Data rec:", " ".join(f"{b:02X}" for b in data_read))
                 
@@ -460,15 +471,10 @@ def flashing_master_process(Identify, UDP_SOCKET={}, _list_hex_data=[], retry=10
    
                 if rlt == SUCCESS:
                     data_already_updated += lenData  
-                    # print("OK", end='-')
-                    ratio = cnt_line_data*100/len(_list_hex_data)
-                    # if ratio % 10 == 0 or data_already_updated == len(_list_hex_data):
-                    #     print(f"-> [Result] - Flashing {data_already_updated} bytes Success ({round((time.time()-start_send)*1000,1)}ms, "
-                    #          f"{round(ratio,2)}%)")
-                         
+                    ratio = cnt_element*100/len(_list_hex_data)
                     print(f"-> [Result] - Flashed {num_byte} bytes Success ({round((time.time()-start_send)*1000,1)}ms, "
                              f"{round(ratio,1)}%)")
-                    cnt_line_data+=1
+                    cnt_element+=1
                     time.sleep(0.001)
                 else:
                     print(f"-> [Result] - Flashing {num_byte} bytes Fail !")
@@ -477,18 +483,18 @@ def flashing_master_process(Identify, UDP_SOCKET={}, _list_hex_data=[], retry=10
                 print("-> [Error] - CRC Check Failed !")
                 print("-> [Received] - ", " ".join(f"{b:02X}" for b in data_read))
                 cnt_error+=1
-
+                
         except socket.timeout:
             print("-> [Timeout] - Receive Response Timeout !")
             cnt_error+=1
-        
-        if cnt_error == 10:
+            
+        if cnt_error == 15:
             print("\n-> [Error] - Flashing BROKEN and FAIL!\n")
             return False
         
-        time.sleep(0.001)
+        # time.sleep(0.001)
         # wait_for_enter()
-
+        
     print(f"\n-> FINISH FLASHING SUCCESS ({round(time.time()-start_flash_t,3)}s) !\n")
     return True
  
@@ -544,62 +550,26 @@ def run_bootloader_APR(Identify, UDP_SOCKET={}, retry=5):
     return False
 
 # ======================================================================================================     
-def analysisHex_APR(type="halfword"):
+def analysisHex_APR(type="qw"):
     # Analysing hex file--------------------------------------------------------------------
     print("\n>>>>>>>>>>>>>> ANALYSING HEX FILE   \n")
-    
-    # path_firmware = "E:\DEV_SPACE__\Chute_Master_FW_developing\Chute_Master_FW_v4.1_KV3_KV1_Developing\MDK-ARM\Chute_Master_Firmware\Chute_Master_Firmware.hex"
-    # current_dir = os.path.dirname(os.path.abspath(__file__))
-    # hex_folder = os.path.join(current_dir, "CodeHex_APR")
-    # if not os.path.exists(hex_folder):
-    #     print(f"-> [Error] - Folder '{hex_folder}' does not exist.")
-    #     exit(1)
-    
-    # hex_files = [f for f in os.listdir(hex_folder) if os.path.isfile(os.path.join(hex_folder, f))]
-    # if not hex_files:
-    #     print(f"-> [Error] - No files found in '{hex_folder}'.")
-    #     exit(1)
-        
-    # print("-> [Result] - Available HEX files in 'CodeHex_APR':")
-    # for idx, fname in enumerate(hex_files):
-    #     print(f"        {idx+1}: {fname}")
-    # while True:
-    #     try:
-    #         choice = int(input("> Select a file by number: "))
-    #         if 1 <= choice <= len(hex_files):
-    #             path_firmware = os.path.join(hex_folder, hex_files[choice-1])
-    #             break
-    #         else:
-    #             print("-> [Error] - Invalid selection. Try again.")
-    #     except ValueError:
-    #         print("-> [Error] - Please enter a valid number.")
-
-    # path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.6_useForTesBootFOTA\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
-    
+      
     while True:
         inp_fw = str(input("\n> Input Firmware Path: "))
-        
-        if inp_fw == "":    
-            print("-> Default Firmware Path: E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex")
-            path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
-        else:
-            path_firmware = inp_fw
+    
+        path_firmware = inp_fw
         
         if not os.path.exists(path_firmware):
             print(f"-> [Error] - File '{path_firmware}' does not exist.")
         else:
             break
         
-    path_firmware = "E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7_developing\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex"
-    
-    # path_firmware = ""E:\DEV_SPACE__\APR_Lora\APR_FW_v3.7\MDK-ARM\AP_Board_v3.1_Config\AP_Board_v3.hex""
-    num_Line, list_data_flash, size_Hex, addr_start, addr_end = analysis_hex(path_firmware, type)
+    list_data_flash, size_Hex, addr_start, addr_end = advanced_analysis_hex(path_firmware, type)
 
-    print(f"-> [INFOR FIRMWARE] - [{type}]")
-    print(f"->                  - Number Line: {num_Line}")
-    print(f"->                  - Address start Flashing: {hex(addr_start)}")
-    print(f"->                  - Address end Flashing: {hex(addr_end)}")
-    print(f"->                  - Size program: {size_Hex}", " bytes = ", str(round(size_Hex/1024,2)) + "kB")
+    print(f"-> [INFOR NEW FIRMWARE] - [{type}]")
+    print(f"->                      - Address start Flashing: {hex(addr_start)}")
+    print(f"->                      - Address end Flashing: {hex(addr_end)}")
+    print(f"->                      - Size program: {size_Hex}", " bytes = ", str(round(size_Hex/1024,2)) + "kB")
     
     return list_data_flash, addr_start, addr_end
 
@@ -611,7 +581,7 @@ def analysisHex_APR(type="halfword"):
 if __name__ == "__main__":
     print("\n-------------> START BOOTING FOTA PROGRAM FOR ACCESS POINT ROBOT <-----------\n")
     
-    list_hex_data, addr_start_flash, addr_end_flash = analysisHex_APR("word")
+    list_hex_data, addr_start_flash, addr_end_flash = analysisHex_APR("dqw")
         
     HOST_INPUT, PORT_INPUT, Identify = check_connection()
         
@@ -707,7 +677,7 @@ if __name__ == "__main__":
         
         time.sleep(1)
         print("\n>>>>>>>>>>>>>> WAIT MCU RESET AND RUNNING NEW APPLICATION FW.... \n") 
-        timedown = 7
+        timedown = 5
         print(f"-> Waiting {timedown}s for APR to reset...")
         while timedown > 0:
             print(f"-> {timedown} s remaining...")
