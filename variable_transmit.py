@@ -48,7 +48,7 @@ except ValueError:
 # ======================================================================================================
 # Create UDP socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.settimeout(0.03)  # 2 seconds timeout
+sock.settimeout(0.5)  # 2 seconds timeout
 
 cnt_sent = 0
 cnt_received = 0
@@ -59,10 +59,17 @@ t_min = 0
 t_sum = 0
 num_t = 0
 
+length = 12   
 try:
     while cnt_do:
-        length = 12 
-        # length = random.randint(4, 50)
+        # length = 12 
+        # length = random.randint(4,200)
+        
+        if length < 200:
+            length+=1
+        else:
+            length = 6
+        
         mess_tx = bytearray(length)
 
         mess_tx[0] = 0x01
@@ -77,11 +84,11 @@ try:
         s_ = time.time()
         sock.sendto(mess_tx, (DEST_IP, DEST_PORT))
         print(f"[SENT] - {cnt_sent+1} - {len(mess_tx)} bytes: {' '.join(f'{b:02X}' for b in mess_tx)}")
-        sock.settimeout(2)  # 2 seconds timeout
+        sock.settimeout(1)  # 2 seconds timeout
         cnt_sent += 1
         
         try:
-            mess_rx, addr = sock.recvfrom(12)  # buffer size is 1024 bytes
+            mess_rx, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
             # print(f"[RECEIVE] - {len(mess_rx)} bytes: {' '.join(f'{b:02X}' for b in mess_rx)}")
             if mess_rx == mess_tx:
                 print(f"[RECEIVE] - {len(mess_rx)} bytes: {' '.join(f'{b:02X}' for b in mess_rx)}")
@@ -103,9 +110,9 @@ try:
             print("-> Timeout")
             print("*")
         
-        # time.sleep(0.5)  # Sleep for 1 millisecond
+        # time.sleep(0.01)  # Sleep for 1 millisecond
         
-        # input("enter to continue...")
+        # input("enter toclear continue...")
         
         cnt_do -= 1
 except KeyboardInterrupt:
