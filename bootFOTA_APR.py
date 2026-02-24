@@ -599,8 +599,9 @@ if __name__ == "__main__":
                 print(f"-> New Version: {newVersion}")
                 break 
         except ValueError:
-            print("-> [Error] - Invalid input. Please enter a number between 0 and 99.")
-            continue
+            print("-> Default Version: 40")
+            newVersion = 40
+            break
     
     
     time.sleep(1)
@@ -654,7 +655,7 @@ if __name__ == "__main__":
             break
         
         # wait_for_enter()
-        time.sleep(1)
+        time.sleep(0.5)
         
         # -------------------------------------------------------------------------------------------
         
@@ -665,7 +666,7 @@ if __name__ == "__main__":
             time.sleep(3)
             break
         
-        time.sleep(2)        
+        time.sleep(0.5)        
         
         # -------------------------------------------------------------------------------------------
         rlt = run_newApplication_fw_APR(Identify, udp_params, addr_start_flash, newVersion, APR_CIRCUIT)
@@ -684,7 +685,7 @@ if __name__ == "__main__":
             time.sleep(1)
             timedown -= 1
             
-        time.sleep(2)
+        # time.sleep(2)
         mode_current = request_status_APR(UDP_SOCKET=udp_params)
         
         if mode_current == APPLICATION_FW_RUNNING:
@@ -700,61 +701,3 @@ if __name__ == "__main__":
 
     
     
-       
-    # Verify Data: 0xe9194b15
-    
-    
-    
-        #  print("\n>>>>>>>>>>>>>> VERIFY FLASHED DATA .... \n") 
-        # mess_verify = bytearray(8)
-        # mess_verify[0] = Identify
-        # mess_verify[1] = 9
-        # mess_verify[2] = CMD_VERIFY_DATA
-        # mess_verify[3] = (addr_start_flash >> 24) & 0xFF
-        # mess_verify[4] = (addr_start_flash >> 16) & 0xFF
-        # mess_verify[5] = (addr_start_flash >> 8) & 0xFF
-        # mess_verify[6] = (addr_start_flash >> 0) & 0xFF
-        # mess_verify[7] = crc8(mess_verify, 8)
-        
-        # sendto_APR(mess_verify, udp_params)
-        # print("-> [Sent] - ", " ".join(f"{b:02X}" for b in mess_verify))
-        # time.sleep(0.001)
-        
-        # try:
-        #     data_read, _ = udp_params.socket.recvfrom(256)
-            
-        #     if len(data_read) < 2:
-        #         print("-> [Error]: Response not enough bytes")
-        #         break
-            
-        #     id_m = data_read[0]
-        #     if id_m != Identify:
-        #         print(f"-> [Error] - Unexpected Identify: {id_m} != {Identify}")
-        #         break
-            
-        #     cmd = data_read[2]
-        #     if cmd != CMD_VERIFY_DATA:
-        #         print(f"-> [Error] - Unexpected Command: {cmd} != {CMD_VERIFY_DATA}")
-        #         break
-            
-        #     if crc8(data_read, len(data_read)) == data_read[-1]:
-        #         print("-> [Received] - ", " ".join(f"{b:02X}" for b in data_read))
-                
-        #         rlt = data_read[3]
-                
-        #         print(f"-> [Result] - Verify Data: {hex((data_read[4]<<24)|(data_read[5]<<16)|(data_read[6]<<8)|data_read[7])} ")
-        #     else:
-        #         print("-> [Error] - CRC Check Failed !")
-        
-        # except socket.timeout:
-        #     print("-> [Timeout] - Receive Response Timeout !")
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        # break
