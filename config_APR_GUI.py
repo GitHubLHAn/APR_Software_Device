@@ -48,25 +48,29 @@ class ConnectApp(tk.Tk):
         # Nút Read Parameters, mặc định disable
         self.read_param_btn = tk.Button(frm_conn, text="Read Parameters", command=self.on_read_parameters, width=20, state="disabled")
         self.read_param_btn.grid(row=3, column=3, columnspan=2, pady=10)
+        
+        # Nút Read Log data, mặc định disable
+        self.read_log = tk.Button(frm_conn, text="Read Log Data", command=self.on_read_log_data, width=20, state="disabled")
+        self.read_log.grid(row=8, column=2, columnspan=2, pady=10)
 
         # Thêm các trường nhập cho New ID, New Port, New Channel
         ttk.Label(frm_conn, text="New ID:").grid(row=5, column=0, padx=5, pady=5, sticky="e")
-        self.new_id_var = tk.StringVar()
+        self.new_id_var = tk.StringVar(value="192.168.1.101")
         self.new_id_entry = ttk.Entry(frm_conn, textvariable=self.new_id_var, width=20)
         self.new_id_entry.grid(row=5, column=1, padx=5, pady=10)
 
         ttk.Label(frm_conn, text="New Port:").grid(row=6, column=0, padx=5, pady=5, sticky="e")
-        self.new_port_var = tk.StringVar()
+        self.new_port_var = tk.StringVar(value="1111")
         self.new_port_entry = ttk.Entry(frm_conn, textvariable=self.new_port_var, width=20)
         self.new_port_entry.grid(row=6, column=1, padx=5, pady=10)
 
         ttk.Label(frm_conn, text="New Channel:").grid(row=7, column=0, padx=5, pady=5, sticky="e")
-        self.new_channel_var = tk.StringVar()
+        self.new_channel_var = tk.StringVar(value="0")
         self.new_channel_entry = ttk.Entry(frm_conn, textvariable=self.new_channel_var, width=20)
         self.new_channel_entry.grid(row=7, column=1, padx=5, pady=10)
 
         # Nút Set Parameters
-        self.set_param_btn = tk.Button(frm_conn, text="Set Parameters", command=self.on_set_parameters, width=20, state="normal")
+        self.set_param_btn = tk.Button(frm_conn, text="Set Parameters", command=self.on_set_parameters, width=20, state="disabled")
         self.set_param_btn.grid(row=7, column=2, columnspan=2, pady=10)
 
         self.udp_socket = None
@@ -91,7 +95,8 @@ class ConnectApp(tk.Tk):
                         self.connect_btn.config(text="DISCONNECT", bg="red", fg="white", activebackground="red")
                         self.check_version_btn.config(state="normal")  # Enable nút Check Version
                         self.read_param_btn.config(state="normal")  
-                        self.set_param_btn.config(state="normal")  
+                        self.set_param_btn.config(state="normal") 
+                        self.read_log.config(state="normal") 
                         
                     except Exception as sock_err:
                         messagebox.showerror("Socket Error", f"Ping OK but cannot create socket:\n{sock_err}")
@@ -100,11 +105,13 @@ class ConnectApp(tk.Tk):
                     self.check_version_btn.config(state="disabled")
                     self.read_param_btn.config(state="disabled")
                     self.set_param_btn.config(state="disabled")  
+                    self.read_log.config(state="disabled") 
             except Exception as e:
                 messagebox.showerror("Connection", f"Cannot Ping to {ip}:\n{e}")
                 self.check_version_btn.config(state="disabled")
                 self.read_param_btn.config(state="disabled")
                 self.set_param_btn.config(state="disabled") 
+                self.read_log.config(state="disabled") 
         else:
             if self.udp_socket:
                 try:
@@ -117,6 +124,7 @@ class ConnectApp(tk.Tk):
             self.check_version_btn.config(state="disabled")  # Disable nút Check Version
             self.read_param_btn.config(state="disabled")
             self.set_param_btn.config(state="disabled") 
+            self.read_log.config(state="disabled") 
             
     def on_check_version(self):
         # messagebox.showinfo("Check Version", "Đã nhấn nút Check Version!\n(Bạn cần bổ sung chức năng gửi lệnh thực tế ở đây.)")
@@ -194,6 +202,51 @@ class ConnectApp(tk.Tk):
 
         except socket.timeout:
             messagebox.showerror("Error", "Response Timeout")
+            
+    def on_read_log_data(self):
+        if not self.connected or not self.udp_socket:
+            messagebox.showwarning("Warning", "You need to connect first!")
+            return
+        
+         # Tạo bản tin 12 byte: AB CD B1 random... CRC8
+        data_send = bytearray(12)
+        data_send[0] = 0xAB
+        data_send[1] = 0xCD
+        data_send[2] = 0xC0
+        for i in range(3, 11):
+            data_send[i] = 0xFE
+        data_send[11] = crc8(data_send, 12)
+
+        ip = self.ip_var.get().strip()
+        port = int(self.port_var.get().strip())
+
+        try:
+            self.udp_socket.sendto(data_send, (ip, port))
+            print("-> Send: ", " ".join(f"{b:02X}" for b in data_send))
+            self.udp_socket.settimeout(1)
+            data_read, _ = self.udp_socket.recvfrom(1024)
+            print("-> Rec:", " ".join(f"{b:02X}" for b in data_read))
+            
+            if crc8(data_read, len(data_read)) == data_read[-1] and             \
+                                                    data_read[0] == 0xAB and   \
+                                                    data_read[1] == 0xCD and    \
+                                                    data_read[2] == 0xC0:
+                day__ = data_read[3]
+                hour__ = data_read[4]
+                minute__ = data_read[5]
+                second__ = data_read[6]
+                rx_udp = (data_read[7] << 24) | (data_read[8] << 16) | (data_read[9] << 8) | data_read[10]
+                tx_rf = (data_read[11] << 24) | (data_read[12] << 16) | (data_read[13] << 8) | data_read[14]
+                rx_rf = (data_read[15] << 24) | (data_read[16] << 16) | (data_read[17] << 8) | data_read[18]
+                tx_udp = (data_read[19] << 24) | (data_read[20] << 16) | (data_read[21] << 8) | data_read[22]
+                id_wrong = data_read[23]
+                time_transfer_rf = (data_read[24] << 8) | data_read[25]
+                messagebox.showinfo("Result ", f"Operation: {day__} d, {hour__} h, {minute__} m, {second__} s\nRx UDP: {rx_udp}\nTx RF: {tx_rf}\nRx RF: {rx_rf}\nTx UDP: {tx_udp}\nID Wrong: {id_wrong}\nTime Transfer RF: {time_transfer_rf/1000} ms") 
+            else:
+                messagebox.showerror("Error", "Response Unexpected or CRC mismatch.")
+
+        except socket.timeout:
+            messagebox.showerror("Error", "Response Timeout")
              
     def on_find_ip(self):
         base_ip = "192.168.1."
@@ -216,8 +269,7 @@ class ConnectApp(tk.Tk):
                 pass
         if not found:
             messagebox.showerror("Find IP", "Cannot find device in range 192.168.1.101 - 192.168.1.254")     
-       
-       
+         
     def on_set_parameters(self):
         if not self.connected or not self.udp_socket:
             messagebox.showwarning("Warning", "You need to connect first!")
@@ -257,7 +309,7 @@ class ConnectApp(tk.Tk):
         try:
             self.udp_socket.sendto(data_send, (ip, port))
             print("-> Sent:", " ".join(f"{b:02X}" for b in data_send))
-            self.udp_socket.settimeout(1)
+            self.udp_socket.settimeout(1.5)
             data_read, _ = self.udp_socket.recvfrom(256)
             if crc8(data_read, len(data_read)) == data_read[-1] and \
                                                 data_read[0] == 0xAB and  \
@@ -265,9 +317,18 @@ class ConnectApp(tk.Tk):
                                             data_read[2] == 0xA1:
                 print("-> Rec:", " ".join(f"{b:02X}" for b in data_read))
                 if data_read[3] == 0x59:
-                    messagebox.showinfo("Set Parameters", "Configurations Successfully Set!")
+                    self.udp_socket.close()
+                    self.udp_socket = None
+                    self.connected = False
+                    self.connect_btn.config(text="CONNECT", bg="green", fg="white", activebackground="green")
+                    self.check_version_btn.config(state="disabled")  # Disable nút Check Version
+                    self.read_param_btn.config(state="disabled")
+                    self.set_param_btn.config(state="disabled") 
+                    self.read_log.config(state="disabled") 
+                    messagebox.showinfo("Set Parameters", "Configurations Successfully!")
+                    
                 else:
-                    messagebox.showerror("Set Parameters", "Configurations Failed to Set!")
+                    messagebox.showerror("Set Parameters", "Configurations Failed!")
             else:
                 messagebox.showerror("Set Parameters", "Response Unexpected or CRC mismatch.")
         except socket.timeout:

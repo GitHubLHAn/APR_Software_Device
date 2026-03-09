@@ -84,7 +84,7 @@ try:
         s_ = time.time()
         sock.sendto(mess_tx, (DEST_IP, DEST_PORT))
         print(f"[SENT] - {cnt_sent+1} - {len(mess_tx)} bytes: {' '.join(f'{b:02X}' for b in mess_tx)}")
-        sock.settimeout(1)  # 2 seconds timeout
+        sock.settimeout(0.5)  # 2 seconds timeout
         cnt_sent += 1
         
         try:
